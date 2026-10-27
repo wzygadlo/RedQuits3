@@ -76,8 +76,6 @@ iconutil -c icns Assets/RedQuits3.iconset -o Assets/RedQuits3.icns
 
 The GitHub repository is the source of truth. Build and run the self-check before committing changes. Never commit access tokens, settings, signing keys, or generated app bundles.
 
-Public pull requests are welcome, but changes to `main` require approval from `@wzygadlo`, the code owner for every file. New commits dismiss previous approvals. The repository owner retains GitHub's administrator override for their own changes.
-
 ## Uninstall
 
 Quit RedQuits3, move `/Applications/RedQuits3.app` to the Trash, and remove its Accessibility entry. Optionally delete `~/Library/Application Support/RedQuits3/` to remove settings.
