@@ -1,6 +1,7 @@
 import AppKit
 
 // Two disposable windows: closing one normally leaves this fixture running.
+// --child-window adds a Settings-style window, which should stop RedQuits3 from quitting the fixture.
 final class Fixture: NSObject, NSApplicationDelegate {
     var windows: [NSWindow] = []
 
@@ -14,14 +15,33 @@ final class Fixture: NSObject, NSApplicationDelegate {
             window.makeKeyAndOrderFront(nil)
             windows.append(window)
         }
+        if CommandLine.arguments.contains("--child-window") {
+            // No minimize button, like most Settings windows.
+            let child = NSWindow(contentRect: NSRect(x: 860, y: 300, width: 300, height: 160),
+                                 styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            child.title = "RedQuits3 disposable child"
+            child.isReleasedWhenClosed = false
+            child.orderFront(nil)
+            windows.append(child)
+        }
         NSApp.activate(ignoringOtherApps: true)
-        guard CommandLine.arguments.count >= 2,
-              let window = windows.last, let button = window.standardWindowButton(.closeButton),
-              let primaryScreen = NSScreen.screens.first else { fatalError("Fixture requires an output path and a screen") }
-        let rect = window.convertToScreen(button.convert(button.bounds, to: nil))
-        let output: [String: Any] = ["pid": ProcessInfo.processInfo.processIdentifier,
-                                     "x": rect.midX, "y": primaryScreen.frame.maxY - rect.midY,
-                                     "windows": windows.count]
+        guard CommandLine.arguments.count >= 2, let primaryScreen = NSScreen.screens.first else {
+            fatalError("Fixture requires an output path and a screen")
+        }
+        // Close-button centers in global top-left-origin coordinates, the space CGEvent and AX use.
+        func closeButtonCenter(_ window: NSWindow) -> CGPoint {
+            guard let button = window.standardWindowButton(.closeButton) else { fatalError("Fixture window has no close button") }
+            let rect = window.convertToScreen(button.convert(button.bounds, to: nil))
+            return CGPoint(x: rect.midX, y: primaryScreen.frame.maxY - rect.midY)
+        }
+        let main = closeButtonCenter(windows[1])
+        var output: [String: Any] = ["pid": ProcessInfo.processInfo.processIdentifier,
+                                     "x": main.x, "y": main.y, "windows": windows.count]
+        if windows.count > 2 {
+            let child = closeButtonCenter(windows[2])
+            output["childX"] = child.x
+            output["childY"] = child.y
+        }
         do {
             try JSONSerialization.data(withJSONObject: output).write(to: URL(fileURLWithPath: CommandLine.arguments[1]), options: .atomic)
         } catch { fatalError("Cannot write fixture coordinates: \(error)") }
